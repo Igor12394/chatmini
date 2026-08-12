@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MiniChat — Firebase</title>
+<title>MiniChat v3</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -13,14 +13,14 @@
     min-height: 100dvh; padding: 0;
   }
   .app {
-    width: 100%; max-width: 900px; height: 100dvh;
+    width: 100%; max-width: 960px; height: 100dvh;
     background: #fff; border-radius: 0;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     display: flex; flex-direction: column; overflow: hidden;
     border: none;
   }
   @media (min-width: 769px) {
-    .app { height: 600px; border-radius: 16px; border: 1px solid #e5e5e5; }
+    .app { height: 640px; border-radius: 16px; border: 1px solid #e5e5e5; }
   }
   .header {
     padding: 12px 16px; border-bottom: 1px solid #eee;
@@ -39,6 +39,10 @@
   .btn-primary { background: #111; color: #fff; border-color: #111; }
   .btn-primary:hover { opacity: .9; background: #111; }
   .btn-icon { padding: 8px; width: 38px; height: 38px; }
+  .btn-danger { background: #fff; color: #e11d48; border-color: #fecdd3; }
+  .btn-danger:hover { background: #fff1f2; }
+  .btn-success { background: #fff; color: #16a34a; border-color: #bbf7d0; }
+  .btn-success:hover { background: #f0fdf4; }
   .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; }
   .screen.active { display: flex; }
   .form-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; }
@@ -47,12 +51,12 @@
   .input-group { margin-bottom: 14px; }
   .input-group label { display: block; font-size: 14px; color: #666; margin-bottom: 4px; }
   .input-wrap { position: relative; display: flex; align-items: center; }
-  .input-wrap input {
-    width: 100%; padding: 12px 14px; padding-right: 44px; border-radius: 10px;
+  .input-wrap input, .input-wrap textarea {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
     border: 1px solid #ddd; font-size: 15px; outline: none;
-    transition: border-color .15s; background: #fff;
+    transition: border-color .15s; background: #fff; font-family: inherit;
   }
-  .input-wrap input:focus { border-color: #111; }
+  .input-wrap input:focus, .input-wrap textarea:focus { border-color: #111; }
   .toggle-pass {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
     background: none; border: none; cursor: pointer; font-size: 18px; color: #999;
@@ -66,12 +70,25 @@
   .error-msg { color: #e11d48; font-size: 13px; margin-top: 4px; min-height: 18px; }
   .two-col { display: flex; flex: 1; overflow: hidden; position: relative; }
   .sidebar {
-    width: 260px; border-right: 1px solid #eee;
+    width: 280px; border-right: 1px solid #eee;
     display: flex; flex-direction: column; background: #fafafa;
     flex-shrink: 0;
   }
-  .sidebar-header { padding: 12px 16px; border-bottom: 1px solid #eee; }
+  .sidebar-header { padding: 10px 14px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; }
   .sidebar-title { font-size: 15px; font-weight: 600; }
+  .sidebar-tabs { display: flex; border-bottom: 1px solid #eee; }
+  .tab-btn {
+    flex: 1; padding: 10px; border: none; background: transparent;
+    font-size: 13px; font-weight: 500; color: #999; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all .15s;
+    position: relative;
+  }
+  .tab-btn.active { color: #111; border-bottom-color: #111; }
+  .tab-btn .badge {
+    position: absolute; top: 4px; right: 4px;
+    background: #e11d48; color: #fff; font-size: 10px;
+    padding: 1px 5px; border-radius: 10px; font-weight: 600;
+  }
   .add-contact-form { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #eee; }
   .add-contact-form input {
     flex: 1; padding: 8px 12px; border-radius: 8px;
@@ -96,6 +113,10 @@
   .contact-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .contact-preview { font-size: 12px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .contact-badge { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .contact-actions {
+    opacity: 0; transition: opacity .15s; display: flex; gap: 4px;
+  }
+  .contact-item:hover .contact-actions, .contact-item:focus-within .contact-actions { opacity: 1; }
   .main-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
   .chat-header { padding: 10px 14px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
   .chat-messages {
@@ -108,6 +129,10 @@
   .msg-own { align-self: flex-end; background: #111; color: #fff; border-bottom-right-radius: 4px; }
   .msg-other { align-self: flex-start; background: #f0f0f0; color: #111; border-bottom-left-radius: 4px; }
   .msg-meta { font-size: 11px; opacity: .6; margin-top: 4px; display: flex; justify-content: space-between; gap: 8px; }
+  .msg-video {
+    width: 200px; height: 200px; border-radius: 50%;
+    object-fit: cover; display: block; background: #000;
+  }
   .chat-input-area { padding: 10px 14px; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
   .chat-input {
     flex: 1; padding: 10px 14px; border-radius: 12px;
@@ -122,6 +147,21 @@
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 100; }
   .toast.show { opacity: 1; }
 
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200; padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 16px; padding: 24px;
+    width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-actions .btn { flex: 1; justify-content: center; }
+
   /* Mobile */
   .mobile-back { display: none !important; }
   @media (max-width: 768px) {
@@ -130,8 +170,10 @@
     .app.chat-open .sidebar { display: none !important; }
     .app.chat-open .main-chat { display: flex !important; }
     .mobile-back { display: inline-flex !important; }
-    .chat-input { font-size: 16px; } /* prevent zoom on iOS */
+    .chat-input { font-size: 16px; }
     .input-wrap input { font-size: 16px; }
+    .contact-actions { opacity: 1; }
+    .sidebar { width: 100%; }
   }
 </style>
 <base target="_blank">
@@ -207,31 +249,60 @@
       </div>
     </div>
     <div class="two-col">
+      <!-- Sidebar -->
       <div class="sidebar">
-        <div class="sidebar-header"><div class="sidebar-title">Друзья</div></div>
-        <div class="add-contact-form">
-          <input type="text" id="add-contact-input" placeholder="Ник друга..." onkeydown="if(event.key==='Enter')addContact()">
-          <button class="btn btn-icon" onclick="addContact()" title="Добавить">➕</button>
+        <div class="sidebar-tabs">
+          <button class="tab-btn active" id="tab-friends" onclick="switchTab('friends')">Друзья</button>
+          <button class="tab-btn" id="tab-channels" onclick="switchTab('channels')">Каналы</button>
+          <button class="tab-btn" id="tab-requests" onclick="switchTab('requests')">Заявки <span id="req-badge" class="badge" style="display:none">0</span></button>
         </div>
-        <div class="hint">Добавь друга по нику</div>
-        <div class="contact-list" id="contact-list"></div>
+
+        <!-- Friends tab -->
+        <div id="panel-friends">
+          <div class="add-contact-form">
+            <input type="text" id="add-contact-input" placeholder="Ник друга..." onkeydown="if(event.key==='Enter')sendFriendRequest()">
+            <button class="btn btn-icon" onclick="sendFriendRequest()" title="Добавить">➕</button>
+          </div>
+          <div class="hint">Отправь заявку в друзья по нику</div>
+          <div class="contact-list" id="contact-list"></div>
+        </div>
+
+        <!-- Channels tab -->
+        <div id="panel-channels" style="display:none">
+          <div class="add-contact-form">
+            <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="openModal('create-channel-modal')">➕ Создать канал</button>
+          </div>
+          <div class="hint">Твои каналы и группы</div>
+          <div class="contact-list" id="channel-list"></div>
+        </div>
+
+        <!-- Requests tab -->
+        <div id="panel-requests" style="display:none">
+          <div class="hint">Входящие заявки в друзья</div>
+          <div class="contact-list" id="request-list"></div>
+        </div>
       </div>
+
+      <!-- Chat area -->
       <div class="main-chat" id="chat-panel">
         <div class="welcome-hint" id="no-chat">
           <div style="font-size:48px;opacity:.2">💬</div>
-          Выбери друга слева, чтобы начать переписку
+          Выбери друга или канал слева
         </div>
         <div id="active-chat" style="display:none;flex-direction:column;flex:1;overflow:hidden">
           <div class="chat-header">
             <button class="btn btn-icon mobile-back" onclick="closeChat()" title="Назад">←</button>
             <div class="contact-avatar" id="chat-avatar"></div>
-            <div style="min-width:0">
+            <div style="min-width:0;flex:1">
               <div class="contact-name" id="chat-name"></div>
-              <div class="contact-preview" id="chat-status">онлайн</div>
+              <div class="contact-preview" id="chat-status"></div>
             </div>
+            <button class="btn btn-icon" id="chat-menu-btn" onclick="toggleChatMenu()" title="Меню">⋮</button>
           </div>
           <div class="chat-messages" id="chat-messages"></div>
           <div class="chat-input-area">
+            <input type="file" id="video-input" accept="video/*" style="display:none" onchange="uploadVideo()">
+            <button class="btn btn-icon" onclick="document.getElementById('video-input').click()" title="Кружок">📹</button>
             <textarea class="chat-input" id="msg-input" rows="1" placeholder="Напиши сообщение..." onkeydown="handleKey(event)"></textarea>
             <button class="btn btn-primary" onclick="sendMessage()">➤</button>
           </div>
@@ -241,15 +312,48 @@
   </div>
 </div>
 
+<!-- Create Channel Modal -->
+<div class="modal-overlay" id="create-channel-modal">
+  <div class="modal-box">
+    <div class="modal-title">Создать канал</div>
+    <div class="input-group">
+      <label>Название</label>
+      <div class="input-wrap">
+        <input type="text" id="new-channel-name" placeholder="Мой канал" onkeydown="if(event.key==='Enter')createChannel()">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('create-channel-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="createChannel()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal-overlay" id="add-member-modal">
+  <div class="modal-box">
+    <div class="modal-title">Добавить в канал</div>
+    <div class="input-group">
+      <label>Ник друга</label>
+      <div class="input-wrap">
+        <input type="text" id="new-member-name" placeholder="nickname" onkeydown="if(event.key==='Enter')addMemberToChannel()">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('add-member-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="addMemberToChannel()">Добавить</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
-<!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getDatabase, ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, set, push, onValue, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-  // ═══ ТВОЙ КОНФИГ ИЗ FIREBASE CONSOLE ═══
   const firebaseConfig = {
     apiKey: "AIzaSyB5aZcc6RtCZtIA4BHyUh6DA2HQ1n2gu-E",
     authDomain: "minichat-32a89.firebaseapp.com",
@@ -259,15 +363,17 @@
     messagingSenderId: "273882434443",
     appId: "1:273882434443:web:cee3f9bdb215df7b54fd8e"
   };
-  // ════════════════════════════════════════
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getDatabase(app);
+  const storage = getStorage(app);
 
   let currentUser = null;
   let currentContact = null;
+  let currentChannel = null;
   let unsubMessages = null;
+  let activeTab = 'friends';
 
   // ── UI helpers ──
   window.showLogin = () => {
@@ -286,6 +392,8 @@
     const el = document.getElementById(id);
     el.type = el.type === 'password' ? 'text' : 'password';
   };
+  window.openModal = (id) => document.getElementById(id).classList.add('show');
+  window.closeModal = (id) => document.getElementById(id).classList.remove('show');
 
   function toast(msg) {
     const t = document.getElementById('toast');
@@ -336,9 +444,11 @@
       document.getElementById('screen-auth').classList.remove('active');
       document.getElementById('screen-main').classList.add('active');
       document.getElementById('current-user-name').textContent = currentUser;
-      renderContacts();
+      listenRequests();
+      renderFriends();
+      renderChannels();
     } else {
-      currentUser = null; currentContact = null;
+      currentUser = null; currentContact = null; currentChannel = null;
       if (unsubMessages) { unsubMessages(); unsubMessages = null; }
       document.getElementById('screen-auth').classList.add('active');
       document.getElementById('screen-main').classList.remove('active');
@@ -348,10 +458,83 @@
     }
   });
 
-  // ── Contacts ──
-  function getAvatar(n) { return n ? n[0].toUpperCase() : '?'; }
+  // ── Tabs ──
+  window.switchTab = (tab) => {
+    activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('panel-friends').style.display = tab === 'friends' ? 'block' : 'none';
+    document.getElementById('panel-channels').style.display = tab === 'channels' ? 'block' : 'none';
+    document.getElementById('panel-requests').style.display = tab === 'requests' ? 'block' : 'none';
+    if (tab === 'friends') renderFriends();
+    if (tab === 'channels') renderChannels();
+    if (tab === 'requests') renderRequests();
+  };
 
-  async function renderContacts() {
+  // ── Friend requests ──
+  window.sendFriendRequest = async () => {
+    const input = document.getElementById('add-contact-input');
+    const to = input.value.trim();
+    if (!to) return;
+    if (to === currentUser) { toast('Это ты :)'); input.value = ''; return; }
+    const uSnap = await get(ref(db, 'users/' + to));
+    if (!uSnap.exists()) { toast('Пользователь "' + to + '" не найден'); return; }
+    // Check if already friends
+    const cSnap = await get(ref(db, 'contacts/' + currentUser + '/' + to));
+    if (cSnap.exists()) { toast('Уже в друзьях'); input.value = ''; return; }
+    // Check if already sent
+    const rSnap = await get(ref(db, 'friendRequests/' + to + '/' + currentUser));
+    if (rSnap.exists()) { toast('Заявка уже отправлена'); input.value = ''; return; }
+    await set(ref(db, 'friendRequests/' + to + '/' + currentUser), { from: currentUser, ts: Date.now() });
+    input.value = '';
+    toast('Заявка отправлена!');
+  };
+
+  function listenRequests() {
+    onValue(ref(db, 'friendRequests/' + currentUser), (snap) => {
+      const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+      const badge = document.getElementById('req-badge');
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'inline-block' : 'none';
+      if (activeTab === 'requests') renderRequests();
+    });
+  }
+
+  async function renderRequests() {
+    const list = document.getElementById('request-list');
+    const snap = await get(ref(db, 'friendRequests/' + currentUser));
+    if (!snap.exists()) { list.innerHTML = '<div class="hint" style="text-align:center;padding-top:20px">Нет входящих заявок</div>'; return; }
+    list.innerHTML = '';
+    Object.entries(snap.val()).forEach(([from, data]) => {
+      const div = document.createElement('div');
+      div.className = 'contact-item';
+      div.innerHTML = `
+        <div class="contact-avatar">${from[0].toUpperCase()}</div>
+        <div class="contact-info"><div class="contact-name">${escapeHtml(from)}</div><div class="contact-preview">Хочет добавить тебя</div></div>
+        <div class="contact-actions">
+          <button class="btn btn-success btn-icon" onclick="acceptRequest('${from}')">✓</button>
+          <button class="btn btn-danger btn-icon" onclick="rejectRequest('${from}')">✕</button>
+        </div>`;
+      list.appendChild(div);
+    });
+  }
+
+  window.acceptRequest = async (from) => {
+    await set(ref(db, 'contacts/' + currentUser + '/' + from), true);
+    await set(ref(db, 'contacts/' + from + '/' + currentUser), true);
+    await remove(ref(db, 'friendRequests/' + currentUser + '/' + from));
+    toast(from + ' добавлен в друзья');
+    renderRequests(); renderFriends();
+  };
+
+  window.rejectRequest = async (from) => {
+    await remove(ref(db, 'friendRequests/' + currentUser + '/' + from));
+    toast('Заявка отклонена');
+    renderRequests();
+  };
+
+  // ── Friends ──
+  async function renderFriends() {
     const list = document.getElementById('contact-list');
     list.innerHTML = '<div class="hint" style="text-align:center;padding:20px"><span class="loader"></span></div>';
     const snap = await get(ref(db, 'contacts/' + currentUser));
@@ -359,7 +542,7 @@
     list.innerHTML = '';
     const names = Object.keys(contacts).sort();
     if (names.length === 0) {
-      list.innerHTML = '<div class="hint" style="text-align:center;padding-top:20px">Пока нет друзей.<br>Добавь кого-нибудь!</div>';
+      list.innerHTML = '<div class="hint" style="text-align:center;padding-top:20px">Пока нет друзей.<br>Отправь заявку!</div>';
       return;
     }
     for (const name of names) {
@@ -367,42 +550,126 @@
       const msgs = msgSnap.exists() ? Object.values(msgSnap.val()) : [];
       const last = msgs.length ? msgs[msgs.length - 1] : null;
       const div = document.createElement('div');
-      div.className = 'contact-item' + (currentContact === name ? ' active' : '');
+      div.className = 'contact-item' + (currentContact === name && !currentChannel ? ' active' : '');
       div.onclick = () => openChat(name);
       div.innerHTML = `
-        <div class="contact-avatar">${getAvatar(name)}</div>
+        <div class="contact-avatar">${name[0].toUpperCase()}</div>
         <div class="contact-info">
           <div class="contact-name">${escapeHtml(name)}</div>
-          <div class="contact-preview">${last ? escapeHtml(last.text.substring(0,30)) : 'Нет сообщений'}</div>
+          <div class="contact-preview">${last ? (last.videoUrl ? '📹 Кружок' : escapeHtml(last.text.substring(0,30))) : 'Нет сообщений'}</div>
         </div>
-        <div class="contact-badge"></div>`;
+        <div class="contact-actions">
+          <button class="btn btn-danger btn-icon" onclick="event.stopPropagation();removeFriend('${name}')">🗑</button>
+        </div>`;
       list.appendChild(div);
     }
   }
 
-  window.addContact = async () => {
-    const input = document.getElementById('add-contact-input');
-    const name = input.value.trim();
-    if (!name) return;
-    if (name === currentUser) { toast('Это ты :)'); input.value = ''; return; }
-    const uSnap = await get(ref(db, 'users/' + name));
-    if (!uSnap.exists()) { toast('Пользователь "' + name + '" не найден'); return; }
-    await set(ref(db, 'contacts/' + currentUser + '/' + name), true);
-    await set(ref(db, 'contacts/' + name + '/' + currentUser), true);
-    input.value = '';
-    renderContacts();
-    toast('Друг добавлен!');
+  window.removeFriend = async (name) => {
+    if (!confirm('Удалить ' + name + ' из друзей?')) return;
+    await remove(ref(db, 'contacts/' + currentUser + '/' + name));
+    await remove(ref(db, 'contacts/' + name + '/' + currentUser));
+    if (currentContact === name) closeChat();
+    toast(name + ' удалён из друзей');
+    renderFriends();
   };
 
   function chatKey(a, b) { return [a, b].sort().join('__'); }
 
-  // ── Chat ──
+  // ── Channels ──
+  window.createChannel = async () => {
+    const name = document.getElementById('new-channel-name').value.trim();
+    if (!name) return;
+    const chRef = push(ref(db, 'channels'));
+    await set(chRef, { name, createdBy: currentUser, created: Date.now() });
+    await set(ref(db, 'channelMembers/' + chRef.key + '/' + currentUser), { role: 'admin', joined: Date.now() });
+    await set(ref(db, 'userChannels/' + currentUser + '/' + chRef.key), true);
+    document.getElementById('new-channel-name').value = '';
+    closeModal('create-channel-modal');
+    toast('Канал создан!');
+    renderChannels();
+  };
+
+  async function renderChannels() {
+    const list = document.getElementById('channel-list');
+    list.innerHTML = '<div class="hint" style="text-align:center;padding:20px"><span class="loader"></span></div>';
+    const snap = await get(ref(db, 'userChannels/' + currentUser));
+    if (!snap.exists()) { list.innerHTML = '<div class="hint" style="text-align:center;padding-top:20px">Нет каналов.<br>Создай первый!</div>'; return; }
+    list.innerHTML = '';
+    const ids = Object.keys(snap.val());
+    for (const id of ids) {
+      const chSnap = await get(ref(db, 'channels/' + id));
+      if (!chSnap.exists()) continue;
+      const ch = chSnap.val();
+      const msgSnap = await get(ref(db, 'channelMessages/' + id));
+      const msgs = msgSnap.exists() ? Object.values(msgSnap.val()) : [];
+      const last = msgs.length ? msgs[msgs.length - 1] : null;
+      const div = document.createElement('div');
+      div.className = 'contact-item' + (currentChannel === id ? ' active' : '');
+      div.onclick = () => openChannel(id);
+      div.innerHTML = `
+        <div class="contact-avatar" style="background:#4f46e5">#</div>
+        <div class="contact-info">
+          <div class="contact-name">${escapeHtml(ch.name)}</div>
+          <div class="contact-preview">${last ? (last.videoUrl ? '📹 Кружок' : escapeHtml(last.text.substring(0,30))) : 'Нет сообщений'}</div>
+        </div>`;
+      list.appendChild(div);
+    }
+  }
+
+  window.openChannel = async (id) => {
+    currentChannel = id; currentContact = null;
+    const chSnap = await get(ref(db, 'channels/' + id));
+    const ch = chSnap.val() || {};
+    document.getElementById('no-chat').style.display = 'none';
+    document.getElementById('active-chat').style.display = 'flex';
+    document.getElementById('chat-name').textContent = ch.name || 'Канал';
+    document.getElementById('chat-avatar').textContent = '#';
+    document.getElementById('chat-avatar').style.background = '#4f46e5';
+    document.getElementById('chat-status').textContent = 'канал';
+    document.getElementById('chat-menu-btn').style.display = 'inline-flex';
+    document.getElementById('app-root').classList.add('chat-open');
+    if (unsubMessages) unsubMessages();
+    const msgRef = ref(db, 'channelMessages/' + id);
+    unsubMessages = onValue(msgRef, (snap) => {
+      const container = document.getElementById('chat-messages');
+      container.innerHTML = '';
+      if (!snap.exists()) return;
+      const msgs = Object.values(snap.val()).sort((a,b) => a.ts - b.ts);
+      msgs.forEach(m => renderMessage(m, container));
+      container.scrollTop = container.scrollHeight;
+    });
+    renderChannels();
+  };
+
+  window.addMemberToChannel = async () => {
+    const name = document.getElementById('new-member-name').value.trim();
+    if (!name || !currentChannel) return;
+    const uSnap = await get(ref(db, 'users/' + name));
+    if (!uSnap.exists()) { toast('Пользователь не найден'); return; }
+    await set(ref(db, 'channelMembers/' + currentChannel + '/' + name), { role: 'member', joined: Date.now() });
+    await set(ref(db, 'userChannels/' + name + '/' + currentChannel), true);
+    document.getElementById('new-member-name').value = '';
+    closeModal('add-member-modal');
+    toast(name + ' добавлен в канал');
+  };
+
+  window.toggleChatMenu = () => {
+    if (currentChannel) {
+      openModal('add-member-modal');
+    }
+  };
+
+  // ── Chat (private) ──
   window.openChat = (name) => {
-    currentContact = name;
+    currentContact = name; currentChannel = null;
     document.getElementById('no-chat').style.display = 'none';
     document.getElementById('active-chat').style.display = 'flex';
     document.getElementById('chat-name').textContent = name;
-    document.getElementById('chat-avatar').textContent = getAvatar(name);
+    document.getElementById('chat-avatar').textContent = name[0].toUpperCase();
+    document.getElementById('chat-avatar').style.background = '#111';
+    document.getElementById('chat-status').textContent = 'онлайн';
+    document.getElementById('chat-menu-btn').style.display = 'none';
     document.getElementById('app-root').classList.add('chat-open');
     if (unsubMessages) unsubMessages();
     const msgRef = ref(db, 'messages/' + chatKey(currentUser, name));
@@ -411,38 +678,74 @@
       container.innerHTML = '';
       if (!snap.exists()) return;
       const msgs = Object.values(snap.val()).sort((a,b) => a.ts - b.ts);
-      msgs.forEach(m => {
-        const div = document.createElement('div');
-        div.className = 'msg ' + (m.from === currentUser ? 'msg-own' : 'msg-other');
-        const time = new Date(m.ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
-        div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="msg-meta"><span>${escapeHtml(m.from)}</span><span>${time}</span></div>`;
-        container.appendChild(div);
-      });
+      msgs.forEach(m => renderMessage(m, container));
       container.scrollTop = container.scrollHeight;
     });
-    renderContacts();
+    renderFriends();
   };
 
   window.closeChat = () => {
-    currentContact = null;
+    currentContact = null; currentChannel = null;
     if (unsubMessages) { unsubMessages(); unsubMessages = null; }
     document.getElementById('no-chat').style.display = 'flex';
     document.getElementById('active-chat').style.display = 'none';
     document.getElementById('app-root').classList.remove('chat-open');
-    renderContacts();
+    renderFriends(); renderChannels();
   };
 
+  function renderMessage(m, container) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + (m.from === currentUser ? 'msg-own' : 'msg-other');
+    const time = new Date(m.ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+    let content = '';
+    if (m.videoUrl) {
+      content = `<video class="msg-video" src="${escapeHtml(m.videoUrl)}" loop autoplay muted playsinline></video>`;
+    } else {
+      content = escapeHtml(m.text);
+    }
+    div.innerHTML = `<div>${content}</div><div class="msg-meta"><span>${escapeHtml(m.from)}</span><span>${time}</span></div>`;
+    container.appendChild(div);
+  }
+
+  // ── Send text ──
   window.sendMessage = async () => {
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
-    if (!text || !currentContact) return;
-    const msgRef = ref(db, 'messages/' + chatKey(currentUser, currentContact));
-    await push(msgRef, { from: currentUser, to: currentContact, text, ts: Date.now() });
+    if (!text) return;
+    if (currentChannel) {
+      await push(ref(db, 'channelMessages/' + currentChannel), { from: currentUser, text, ts: Date.now() });
+    } else if (currentContact) {
+      await push(ref(db, 'messages/' + chatKey(currentUser, currentContact)), { from: currentUser, to: currentContact, text, ts: Date.now() });
+    }
     input.value = ''; input.style.height = 'auto';
   };
 
   window.handleKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
+  };
+
+  // ── Video / Кружочки ──
+  window.uploadVideo = async () => {
+    const fileInput = document.getElementById('video-input');
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast('Файл слишком большой (макс 10 МБ)'); return; }
+    toast('Загрузка видео...');
+    try {
+      const path = 'videos/' + Date.now() + '_' + file.name;
+      const sRef = storageRef(storage, path);
+      await uploadBytes(sRef, file);
+      const url = await getDownloadURL(sRef);
+      if (currentChannel) {
+        await push(ref(db, 'channelMessages/' + currentChannel), { from: currentUser, videoUrl: url, ts: Date.now() });
+      } else if (currentContact) {
+        await push(ref(db, 'messages/' + chatKey(currentUser, currentContact)), { from: currentUser, to: currentContact, videoUrl: url, ts: Date.now() });
+      }
+      toast('Кружок отправлен!');
+    } catch (e) {
+      toast('Ошибка загрузки: ' + e.message);
+    }
+    fileInput.value = '';
   };
 
   function escapeHtml(t) {

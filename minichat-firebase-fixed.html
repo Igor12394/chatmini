@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiniChat — Firebase</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 16px;
+  }
+  .app {
+    width: 100%; max-width: 900px; height: 600px;
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column; overflow: hidden;
+    border: 1px solid #e5e5e5;
+  }
+  .header {
+    padding: 14px 20px; border-bottom: 1px solid #eee;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fafafa;
+  }
+  .header-title { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .header-user { font-size: 14px; color: #666; display: flex; align-items: center; gap: 10px; }
+  .btn {
+    padding: 8px 16px; border-radius: 10px; border: 1px solid #ddd;
+    background: #fff; color: #111; font-size: 14px; cursor: pointer;
+    transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: #f0f0f0; }
+  .btn-primary { background: #111; color: #fff; border-color: #111; }
+  .btn-primary:hover { opacity: .9; background: #111; }
+  .btn-icon { padding: 8px; }
+  .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+  .screen.active { display: flex; }
+  .form-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .form-box { width: 100%; max-width: 360px; }
+  .form-title { font-size: 22px; font-weight: 600; margin-bottom: 24px; text-align: center; }
+  .input-group { margin-bottom: 14px; }
+  .input-group label { display: block; font-size: 14px; color: #666; margin-bottom: 4px; }
+  .input-group input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid #ddd; font-size: 15px; outline: none;
+    transition: border-color .15s;
+  }
+  .input-group input:focus { border-color: #111; }
+  .form-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .form-actions .btn { justify-content: center; padding: 12px; font-size: 15px; }
+  .form-toggle { text-align: center; font-size: 14px; color: #666; margin-top: 14px; }
+  .form-toggle a { color: #111; cursor: pointer; text-decoration: underline; font-weight: 500; }
+  .error-msg { color: #e11d48; font-size: 13px; margin-top: 4px; min-height: 18px; }
+  .two-col { display: flex; flex: 1; overflow: hidden; }
+  .sidebar {
+    width: 260px; border-right: 1px solid #eee;
+    display: flex; flex-direction: column; background: #fafafa;
+  }
+  .sidebar-header { padding: 14px 16px; border-bottom: 1px solid #eee; }
+  .sidebar-title { font-size: 15px; font-weight: 600; }
+  .add-contact-form { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #eee; }
+  .add-contact-form input {
+    flex: 1; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid #ddd; font-size: 14px; outline: none;
+  }
+  .add-contact-form input:focus { border-color: #111; }
+  .hint { font-size: 12px; color: #999; padding: 8px 14px; }
+  .contact-list { flex: 1; overflow-y: auto; padding: 6px; }
+  .contact-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; border-radius: 10px; cursor: pointer;
+    transition: background .15s; position: relative;
+  }
+  .contact-item:hover, .contact-item.active { background: #eee; }
+  .contact-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: #111; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; flex-shrink: 0;
+  }
+  .contact-info { flex: 1; min-width: 0; }
+  .contact-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .contact-preview { font-size: 12px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .contact-badge { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .main-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .chat-header { padding: 12px 18px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .msg { max-width: 75%; padding: 10px 14px; border-radius: 14px;
+    font-size: 14px; line-height: 1.5; position: relative; word-break: break-word;
+  }
+  .msg-own { align-self: flex-end; background: #111; color: #fff; border-bottom-right-radius: 4px; }
+  .msg-other { align-self: flex-start; background: #f0f0f0; color: #111; border-bottom-left-radius: 4px; }
+  .msg-meta { font-size: 11px; opacity: .6; margin-top: 4px; display: flex; justify-content: space-between; gap: 8px; }
+  .chat-input-area { padding: 12px 18px; border-top: 1px solid #eee; display: flex; gap: 10px; align-items: flex-end; }
+  .chat-input {
+    flex: 1; padding: 10px 14px; border-radius: 12px;
+    border: 1px solid #ddd; font-size: 15px; outline: none;
+    resize: none; max-height: 100px; font-family: inherit; line-height: 1.4;
+  }
+  .chat-input:focus { border-color: #111; }
+  .welcome-hint { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #bbb; font-size: 15px; text-align: center; padding: 40px; }
+  .loader { display: inline-block; width: 16px; height: 16px; border: 2px solid #ddd; border-top-color: #111; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Auth -->
+  <div class="screen active" id="screen-auth">
+    <div class="header">
+      <div class="header-title">💬 MiniChat</div>
+    </div>
+    <div class="form-container">
+      <div class="form-box">
+        <div class="form-title" id="auth-title">Вход</div>
+        <div id="login-form">
+          <div class="input-group">
+            <label>Email</label>
+            <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="input-group">
+            <label>Пароль</label>
+            <input type="password" id="login-password" placeholder="••••••">
+          </div>
+          <div class="error-msg" id="login-error"></div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="doLogin()">Войти</button>
+          </div>
+          <div class="form-toggle">Нет аккаунта? <a onclick="showRegister()">Создать</a></div>
+        </div>
+        <div id="register-form" style="display:none">
+          <div class="input-group">
+            <label>Имя (ник)</label>
+            <input type="text" id="reg-name" placeholder="your_nickname" autocomplete="off">
+          </div>
+          <div class="input-group">
+            <label>Email</label>
+            <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="input-group">
+            <label>Пароль</label>
+            <input type="password" id="reg-password" placeholder="минимум 6 символов">
+          </div>
+          <div class="error-msg" id="reg-error"></div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="doRegister()">Создать аккаунт</button>
+          </div>
+          <div class="form-toggle">Уже есть аккаунт? <a onclick="showLogin()">Войти</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="screen" id="screen-main">
+    <div class="header">
+      <div class="header-title">💬 MiniChat</div>
+      <div class="header-user">
+        <span id="current-user-name"></span>
+        <button class="btn btn-icon" onclick="logout()" title="Выйти">🚪</button>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="sidebar">
+        <div class="sidebar-header"><div class="sidebar-title">Друзья</div></div>
+        <div class="add-contact-form">
+          <input type="text" id="add-contact-input" placeholder="Ник друга..." onkeydown="if(event.key==='Enter')addContact()">
+          <button class="btn btn-icon" onclick="addContact()" title="Добавить">➕</button>
+        </div>
+        <div class="hint">Добавь друга по нику</div>
+        <div class="contact-list" id="contact-list"></div>
+      </div>
+      <div class="main-chat" id="chat-panel">
+        <div class="welcome-hint" id="no-chat">
+          <div style="font-size:48px;opacity:.2">💬</div>
+          Выбери друга слева, чтобы начать переписку
+        </div>
+        <div id="active-chat" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+          <div class="chat-header">
+            <div class="contact-avatar" id="chat-avatar"></div>
+            <div>
+              <div class="contact-name" id="chat-name"></div>
+              <div class="contact-preview" id="chat-status">онлайн</div>
+            </div>
+          </div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-area">
+            <textarea class="chat-input" id="msg-input" rows="1" placeholder="Напиши сообщение..." onkeydown="handleKey(event)"></textarea>
+            <button class="btn btn-primary" onclick="sendMessage()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getDatabase, ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ═══ ТВОЙ КОНФИГ ИЗ FIREBASE CONSOLE ═══
+  const firebaseConfig = {
+    apiKey: "AIzaSyB5aZcc6RtCZtIA4BHyUh6DA2HQ1n2gu-E",
+    authDomain: "minichat-32a89.firebaseapp.com",
+    databaseURL: "https://minichat-32a89-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "minichat-32a89",
+    storageBucket: "minichat-32a89.firebasestorage.app",
+    messagingSenderId: "273882434443",
+    appId: "1:273882434443:web:cee3f9bdb215df7b54fd8e"
+  };
+  // ════════════════════════════════════════
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  let currentUser = null;
+  let currentContact = null;
+  let unsubMessages = null;
+
+  // ── UI helpers ──
+  window.showLogin = () => {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('auth-title').textContent = 'Вход';
+    document.getElementById('login-error').textContent = '';
+  };
+  window.showRegister = () => {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('auth-title').textContent = 'Регистрация';
+    document.getElementById('reg-error').textContent = '';
+  };
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Auth ──
+  window.doRegister = async () => {
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass = document.getElementById('reg-password').value;
+    const errEl = document.getElementById('reg-error');
+    if (!name || !email || !pass) { errEl.textContent = 'Заполни все поля'; return; }
+    if (pass.length < 6) { errEl.textContent = 'Пароль минимум 6 символов'; return; }
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await updateProfile(cred.user, { displayName: name });
+      await set(ref(db, 'users/' + name), { uid: cred.user.uid, email, created: Date.now() });
+      errEl.textContent = '';
+      toast('Аккаунт создан!');
+      window.showLogin();
+      document.getElementById('login-error').textContent = 'Теперь войди.';
+    } catch (e) {
+      errEl.textContent = e.message.includes('email-already') ? 'Этот email уже используется' : e.message;
+    }
+  };
+
+  window.doLogin = async () => {
+    const email = document.getElementById('login-email').value.trim();
+    const pass = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      errEl.textContent = '';
+    } catch (e) {
+      errEl.textContent = 'Неверный email или пароль';
+    }
+  };
+
+  window.logout = () => signOut(auth);
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user.displayName || user.email.split('@')[0];
+      document.getElementById('screen-auth').classList.remove('active');
+      document.getElementById('screen-main').classList.add('active');
+      document.getElementById('current-user-name').textContent = currentUser;
+      renderContacts();
+    } else {
+      currentUser = null; currentContact = null;
+      if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+      document.getElementById('screen-auth').classList.add('active');
+      document.getElementById('screen-main').classList.remove('active');
+      document.getElementById('no-chat').style.display = 'flex';
+      document.getElementById('active-chat').style.display = 'none';
+    }
+  });
+
+  // ── Contacts ──
+  function getAvatar(n) { return n ? n[0].toUpperCase() : '?'; }
+
+  async function renderContacts() {
+    const list = document.getElementById('contact-list');
+    list.innerHTML = '<div class="hint" style="text-align:center;padding:20px"><span class="loader"></span></div>';
+    const snap = await get(ref(db, 'contacts/' + currentUser));
+    const contacts = snap.exists() ? snap.val() : {};
+    list.innerHTML = '';
+    const names = Object.keys(contacts).sort();
+    if (names.length === 0) {
+      list.innerHTML = '<div class="hint" style="text-align:center;padding-top:20px">Пока нет друзей.<br>Добавь кого-нибудь!</div>';
+      return;
+    }
+    for (const name of names) {
+      const msgSnap = await get(ref(db, 'messages/' + chatKey(currentUser, name)));
+      const msgs = msgSnap.exists() ? Object.values(msgSnap.val()) : [];
+      const last = msgs.length ? msgs[msgs.length - 1] : null;
+      const div = document.createElement('div');
+      div.className = 'contact-item' + (currentContact === name ? ' active' : '');
+      div.onclick = () => openChat(name);
+      div.innerHTML = `
+        <div class="contact-avatar">${getAvatar(name)}</div>
+        <div class="contact-info">
+          <div class="contact-name">${escapeHtml(name)}</div>
+          <div class="contact-preview">${last ? escapeHtml(last.text.substring(0,30)) : 'Нет сообщений'}</div>
+        </div>
+        <div class="contact-badge"></div>`;
+      list.appendChild(div);
+    }
+  }
+
+  window.addContact = async () => {
+    const input = document.getElementById('add-contact-input');
+    const name = input.value.trim();
+    if (!name) return;
+    if (name === currentUser) { toast('Это ты :)'); input.value = ''; return; }
+    const uSnap = await get(ref(db, 'users/' + name));
+    if (!uSnap.exists()) { toast('Пользователь "' + name + '" не найден'); return; }
+    await set(ref(db, 'contacts/' + currentUser + '/' + name), true);
+    await set(ref(db, 'contacts/' + name + '/' + currentUser), true);
+    input.value = '';
+    renderContacts();
+    toast('Друг добавлен!');
+  };
+
+  function chatKey(a, b) { return [a, b].sort().join('__'); }
+
+  // ── Chat ──
+  window.openChat = (name) => {
+    currentContact = name;
+    document.getElementById('no-chat').style.display = 'none';
+    document.getElementById('active-chat').style.display = 'flex';
+    document.getElementById('chat-name').textContent = name;
+    document.getElementById('chat-avatar').textContent = getAvatar(name);
+    if (unsubMessages) unsubMessages();
+    const msgRef = ref(db, 'messages/' + chatKey(currentUser, name));
+    unsubMessages = onValue(msgRef, (snap) => {
+      const container = document.getElementById('chat-messages');
+      container.innerHTML = '';
+      if (!snap.exists()) return;
+      const msgs = Object.values(snap.val()).sort((a,b) => a.ts - b.ts);
+      msgs.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'msg ' + (m.from === currentUser ? 'msg-own' : 'msg-other');
+        const time = new Date(m.ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+        div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="msg-meta"><span>${escapeHtml(m.from)}</span><span>${time}</span></div>`;
+        container.appendChild(div);
+      });
+      container.scrollTop = container.scrollHeight;
+    });
+    renderContacts();
+  };
+
+  window.sendMessage = async () => {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text || !currentContact) return;
+    const msgRef = ref(db, 'messages/' + chatKey(currentUser, currentContact));
+    await push(msgRef, { from: currentUser, to: currentContact, text, ts: Date.now() });
+    input.value = ''; input.style.height = 'auto';
+  };
+
+  window.handleKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
+  };
+
+  function escapeHtml(t) {
+    const d = document.createElement('div'); d.textContent = t; return d.innerHTML;
+  }
+
+  // Auto-resize textarea
+  const tx = document.getElementById('msg-input');
+  tx.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 100) + 'px'; });
+</script>
+</body>
+</html>

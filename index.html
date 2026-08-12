@@ -833,12 +833,12 @@
     if (!text) return;
     if (currentChannel) {
       const msgRef = push(ref(db, 'channelMessages/' + currentChannel));
-      await msgRef.set({ from: currentUser, text, ts: Date.now() });
+      await set(msgRef, { from: currentUser, text, ts: Date.now() });
       await set(ref(db, 'channelMeta/' + currentChannel + '/lastActivity'), { ts: Date.now(), text, from: currentUser });
     } else if (currentContact) {
       const ck = chatKey(currentUser, currentContact);
       const msgRef = push(ref(db, 'messages/' + ck));
-      await msgRef.set({ from: currentUser, to: currentContact, text, ts: Date.now() });
+      await set(msgRef, { from: currentUser, to: currentContact, text, ts: Date.now() });
       await set(ref(db, 'chatMeta/' + ck + '/lastActivity'), { ts: Date.now(), text, from: currentUser });
     }
     input.value = ''; input.style.height = 'auto';
@@ -862,12 +862,12 @@
         if (base64.length > 900000) { toast('Видео слишком большое после конвертации'); return; }
         if (currentChannel) {
           const msgRef = push(ref(db, 'channelMessages/' + currentChannel));
-          await msgRef.set({ from: currentUser, videoBase64: base64, ts: Date.now() });
+          await set(msgRef, { from: currentUser, videoBase64: base64, ts: Date.now() });
           await set(ref(db, 'channelMeta/' + currentChannel + '/lastActivity'), { ts: Date.now(), videoUrl: true, from: currentUser });
         } else if (currentContact) {
           const ck = chatKey(currentUser, currentContact);
           const msgRef = push(ref(db, 'messages/' + ck));
-          await msgRef.set({ from: currentUser, to: currentContact, videoBase64: base64, ts: Date.now() });
+          await set(msgRef, { from: currentUser, to: currentContact, videoBase64: base64, ts: Date.now() });
           await set(ref(db, 'chatMeta/' + ck + '/lastActivity'), { ts: Date.now(), videoUrl: true, from: currentUser });
         }
         toast('Кружок отправлен!');

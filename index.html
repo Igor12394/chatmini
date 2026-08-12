@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>MiniChat — Firebase</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -10,55 +10,67 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background: #f5f5f5;
     display: flex; justify-content: center; align-items: center;
-    min-height: 100vh; padding: 16px;
+    min-height: 100dvh; padding: 0;
   }
   .app {
-    width: 100%; max-width: 900px; height: 600px;
-    background: #fff; border-radius: 16px;
+    width: 100%; max-width: 900px; height: 100dvh;
+    background: #fff; border-radius: 0;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     display: flex; flex-direction: column; overflow: hidden;
-    border: 1px solid #e5e5e5;
+    border: none;
+  }
+  @media (min-width: 769px) {
+    .app { height: 600px; border-radius: 16px; border: 1px solid #e5e5e5; }
   }
   .header {
-    padding: 14px 20px; border-bottom: 1px solid #eee;
+    padding: 12px 16px; border-bottom: 1px solid #eee;
     display: flex; align-items: center; justify-content: space-between;
-    background: #fafafa;
+    background: #fafafa; flex-shrink: 0;
   }
   .header-title { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .header-user { font-size: 14px; color: #666; display: flex; align-items: center; gap: 10px; }
   .btn {
-    padding: 8px 16px; border-radius: 10px; border: 1px solid #ddd;
+    padding: 8px 14px; border-radius: 10px; border: 1px solid #ddd;
     background: #fff; color: #111; font-size: 14px; cursor: pointer;
-    transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+    transition: all .15s; display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; flex-shrink: 0;
   }
   .btn:hover { background: #f0f0f0; }
   .btn-primary { background: #111; color: #fff; border-color: #111; }
   .btn-primary:hover { opacity: .9; background: #111; }
-  .btn-icon { padding: 8px; }
+  .btn-icon { padding: 8px; width: 38px; height: 38px; }
   .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; }
   .screen.active { display: flex; }
-  .form-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .form-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; }
   .form-box { width: 100%; max-width: 360px; }
   .form-title { font-size: 22px; font-weight: 600; margin-bottom: 24px; text-align: center; }
   .input-group { margin-bottom: 14px; }
   .input-group label { display: block; font-size: 14px; color: #666; margin-bottom: 4px; }
-  .input-group input {
-    width: 100%; padding: 12px 14px; border-radius: 10px;
+  .input-wrap { position: relative; display: flex; align-items: center; }
+  .input-wrap input {
+    width: 100%; padding: 12px 14px; padding-right: 44px; border-radius: 10px;
     border: 1px solid #ddd; font-size: 15px; outline: none;
-    transition: border-color .15s;
+    transition: border-color .15s; background: #fff;
   }
-  .input-group input:focus { border-color: #111; }
+  .input-wrap input:focus { border-color: #111; }
+  .toggle-pass {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; font-size: 18px; color: #999;
+    padding: 4px; line-height: 1;
+  }
+  .toggle-pass:hover { color: #111; }
   .form-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
   .form-actions .btn { justify-content: center; padding: 12px; font-size: 15px; }
   .form-toggle { text-align: center; font-size: 14px; color: #666; margin-top: 14px; }
   .form-toggle a { color: #111; cursor: pointer; text-decoration: underline; font-weight: 500; }
   .error-msg { color: #e11d48; font-size: 13px; margin-top: 4px; min-height: 18px; }
-  .two-col { display: flex; flex: 1; overflow: hidden; }
+  .two-col { display: flex; flex: 1; overflow: hidden; position: relative; }
   .sidebar {
     width: 260px; border-right: 1px solid #eee;
     display: flex; flex-direction: column; background: #fafafa;
+    flex-shrink: 0;
   }
-  .sidebar-header { padding: 14px 16px; border-bottom: 1px solid #eee; }
+  .sidebar-header { padding: 12px 16px; border-bottom: 1px solid #eee; }
   .sidebar-title { font-size: 15px; font-weight: 600; }
   .add-contact-form { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #eee; }
   .add-contact-form input {
@@ -66,7 +78,7 @@
     border: 1px solid #ddd; font-size: 14px; outline: none;
   }
   .add-contact-form input:focus { border-color: #111; }
-  .hint { font-size: 12px; color: #999; padding: 8px 14px; }
+  .hint { font-size: 12px; color: #999; padding: 6px 14px; }
   .contact-list { flex: 1; overflow-y: auto; padding: 6px; }
   .contact-item {
     display: flex; align-items: center; gap: 10px;
@@ -84,23 +96,24 @@
   .contact-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .contact-preview { font-size: 12px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .contact-badge { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
-  .main-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  .chat-header { padding: 12px 18px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+  .main-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .chat-header { padding: 10px 14px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
   .chat-messages {
-    flex: 1; overflow-y: auto; padding: 18px;
-    display: flex; flex-direction: column; gap: 12px;
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: flex; flex-direction: column; gap: 10px;
   }
-  .msg { max-width: 75%; padding: 10px 14px; border-radius: 14px;
+  .msg { max-width: 80%; padding: 10px 14px; border-radius: 14px;
     font-size: 14px; line-height: 1.5; position: relative; word-break: break-word;
   }
   .msg-own { align-self: flex-end; background: #111; color: #fff; border-bottom-right-radius: 4px; }
   .msg-other { align-self: flex-start; background: #f0f0f0; color: #111; border-bottom-left-radius: 4px; }
   .msg-meta { font-size: 11px; opacity: .6; margin-top: 4px; display: flex; justify-content: space-between; gap: 8px; }
-  .chat-input-area { padding: 12px 18px; border-top: 1px solid #eee; display: flex; gap: 10px; align-items: flex-end; }
+  .chat-input-area { padding: 10px 14px; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
   .chat-input {
     flex: 1; padding: 10px 14px; border-radius: 12px;
     border: 1px solid #ddd; font-size: 15px; outline: none;
     resize: none; max-height: 100px; font-family: inherit; line-height: 1.4;
+    min-height: 42px;
   }
   .chat-input:focus { border-color: #111; }
   .welcome-hint { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #bbb; font-size: 15px; text-align: center; padding: 40px; }
@@ -108,11 +121,24 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 100; }
   .toast.show { opacity: 1; }
+
+  /* Mobile */
+  .mobile-back { display: none !important; }
+  @media (max-width: 768px) {
+    .sidebar { width: 100%; position: absolute; top: 0; left: 0; height: 100%; z-index: 1; }
+    .main-chat { width: 100%; position: absolute; top: 0; left: 0; height: 100%; z-index: 2; background: #fff; display: none !important; }
+    .app.chat-open .sidebar { display: none !important; }
+    .app.chat-open .main-chat { display: flex !important; }
+    .mobile-back { display: inline-flex !important; }
+    .chat-input { font-size: 16px; } /* prevent zoom on iOS */
+    .input-wrap input { font-size: 16px; }
+  }
 </style>
+<base target="_blank">
 </head>
 <body>
 
-<div class="app">
+<div class="app" id="app-root">
   <!-- Auth -->
   <div class="screen active" id="screen-auth">
     <div class="header">
@@ -124,11 +150,16 @@
         <div id="login-form">
           <div class="input-group">
             <label>Email</label>
-            <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+            <div class="input-wrap">
+              <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+            </div>
           </div>
           <div class="input-group">
             <label>Пароль</label>
-            <input type="password" id="login-password" placeholder="••••••">
+            <div class="input-wrap">
+              <input type="password" id="login-password" placeholder="••••••">
+              <button type="button" class="toggle-pass" onclick="togglePassword('login-password')">👁</button>
+            </div>
           </div>
           <div class="error-msg" id="login-error"></div>
           <div class="form-actions">
@@ -139,15 +170,22 @@
         <div id="register-form" style="display:none">
           <div class="input-group">
             <label>Имя (ник)</label>
-            <input type="text" id="reg-name" placeholder="your_nickname" autocomplete="off">
+            <div class="input-wrap">
+              <input type="text" id="reg-name" placeholder="your_nickname" autocomplete="off">
+            </div>
           </div>
           <div class="input-group">
             <label>Email</label>
-            <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email">
+            <div class="input-wrap">
+              <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email">
+            </div>
           </div>
           <div class="input-group">
             <label>Пароль</label>
-            <input type="password" id="reg-password" placeholder="минимум 6 символов">
+            <div class="input-wrap">
+              <input type="password" id="reg-password" placeholder="минимум 6 символов">
+              <button type="button" class="toggle-pass" onclick="togglePassword('reg-password')">👁</button>
+            </div>
           </div>
           <div class="error-msg" id="reg-error"></div>
           <div class="form-actions">
@@ -185,8 +223,9 @@
         </div>
         <div id="active-chat" style="display:none;flex-direction:column;flex:1;overflow:hidden">
           <div class="chat-header">
+            <button class="btn btn-icon mobile-back" onclick="closeChat()" title="Назад">←</button>
             <div class="contact-avatar" id="chat-avatar"></div>
-            <div>
+            <div style="min-width:0">
               <div class="contact-name" id="chat-name"></div>
               <div class="contact-preview" id="chat-status">онлайн</div>
             </div>
@@ -243,6 +282,10 @@
     document.getElementById('auth-title').textContent = 'Регистрация';
     document.getElementById('reg-error').textContent = '';
   };
+  window.togglePassword = (id) => {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+  };
 
   function toast(msg) {
     const t = document.getElementById('toast');
@@ -261,6 +304,7 @@
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       await updateProfile(cred.user, { displayName: name });
+      await set(ref(db, 'uids/' + cred.user.uid), name);
       await set(ref(db, 'users/' + name), { uid: cred.user.uid, email, created: Date.now() });
       errEl.textContent = '';
       toast('Аккаунт создан!');
@@ -285,9 +329,10 @@
 
   window.logout = () => signOut(auth);
 
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
-      currentUser = user.displayName || user.email.split('@')[0];
+      const uidSnap = await get(ref(db, 'uids/' + user.uid));
+      currentUser = uidSnap.exists() ? uidSnap.val() : (user.displayName || user.email.split('@')[0]);
       document.getElementById('screen-auth').classList.remove('active');
       document.getElementById('screen-main').classList.add('active');
       document.getElementById('current-user-name').textContent = currentUser;
@@ -299,6 +344,7 @@
       document.getElementById('screen-main').classList.remove('active');
       document.getElementById('no-chat').style.display = 'flex';
       document.getElementById('active-chat').style.display = 'none';
+      document.getElementById('app-root').classList.remove('chat-open');
     }
   });
 
@@ -357,6 +403,7 @@
     document.getElementById('active-chat').style.display = 'flex';
     document.getElementById('chat-name').textContent = name;
     document.getElementById('chat-avatar').textContent = getAvatar(name);
+    document.getElementById('app-root').classList.add('chat-open');
     if (unsubMessages) unsubMessages();
     const msgRef = ref(db, 'messages/' + chatKey(currentUser, name));
     unsubMessages = onValue(msgRef, (snap) => {
@@ -373,6 +420,15 @@
       });
       container.scrollTop = container.scrollHeight;
     });
+    renderContacts();
+  };
+
+  window.closeChat = () => {
+    currentContact = null;
+    if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+    document.getElementById('no-chat').style.display = 'flex';
+    document.getElementById('active-chat').style.display = 'none';
+    document.getElementById('app-root').classList.remove('chat-open');
     renderContacts();
   };
 
